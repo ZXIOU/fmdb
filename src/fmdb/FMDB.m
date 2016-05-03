@@ -10,24 +10,65 @@
 
 @interface FMDB ()
 
-@property(nonatomic, strong)FMDatabase *database;
+@property(nonatomic, strong)FMDB *database;
 
 @end
 
 @implementation FMDB
 
 #pragma mark - Define a single instance of the class
-static AXUDataBaseHandle *_dbHandle = nil;
 
-+ (AXUDataBaseHandle *)shareInstance
+// 通用单例模式接口
++ (FMDB *)shareInstance
+{
+    return [[self alloc] init];
+}
+
+// alloc会调用allocWithZone:
++ (instancetype)allocWithZone:(struct _NSZone *)zone
+{
+    static FMDB *_dbHandle = nil; // 首先声明一个单例static对象
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{            // 确保只进行一次达到单例的目的
+        _dbHandle = [super allocWithZone:zone];
+    });
+
+    return _dbHandle;
+}
+
+// 初始化方法
+- (instancetype)init
 {
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        _dbHandle = [[self alloc] init];
-    }) ;
-    
-    return _dbHandle ;
+    dispatch_once(&onceToken, ^{            // 确保只进行一次达到单例的目的
+        _instance = [super init];
+    });
+
+    return _dbHandle;
 }
+
+// copy在底层会调用copyWithZone:
+- (id)copyWithZone:(NSZone *)zone
+{
+    return  _dbHandle;
+}
+
++ (id)copyWithZone:(struct _NSZone *)zone
+{
+    return _dbHandle;
+}
+
+- (id)mutableCopyWithZone:(NSZone *)zone
+{
+    return _dbHandle;
+}
+
++ (id)mutableCopyWithZone:(struct _NSZone *)zone
+{
+    return _dbHandle;
+}
+
 
 #pragma mark - The operation of opening the database
 - (BOOL)openDataBase
@@ -35,19 +76,19 @@ static AXUDataBaseHandle *_dbHandle = nil;
     if (_database) {
         return true;
     }
-    
+
 //    Get the sandbox file path
     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
 //    Get the database file path
     NSString *dataBasePath = [documents stringByAppendingPathComponent:@"user.sqlite"];
-    
+
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         _queue = [FMDatabaseQueue databaseQueueWithPath:dataBasePath];
     }) ;
-    
+
     _database = [FMDatabase databaseWithPath:dataBasePath];
-    
+
     if ([_database open]){
 //        Set up the cache for the database, improve the query efficiency
         _database.shouldCacheStatements = YES;
@@ -57,7 +98,7 @@ static AXUDataBaseHandle *_dbHandle = nil;
         NSLog(@"Opening database have failed, path:%@, errorMsg:%@.", _database, [_database lastError]);
         return false;
     }
-    
+
 }
 
 #pragma mark - The operation of closing the database
@@ -67,7 +108,7 @@ static AXUDataBaseHandle *_dbHandle = nil;
         _database = nil;
         NSLog(@"Database has been closed successfully.");
     }else{
-        
+
         NSLog(@"Closing database have failed, path:%@, errorMsg:%@.", _database, [_database lastError]);
     }
 }
@@ -105,7 +146,7 @@ static AXUDataBaseHandle *_dbHandle = nil;
 - (void)creatTable:(NSString *)tableName withSql:(NSString *)sql
 {
     [self execSqlInFmdb:^(FMDatabase *db){
-        
+
         if (![db tableExists:tableName]) {
             BOOL res = [db executeUpdate:sql];
             if (!res) {

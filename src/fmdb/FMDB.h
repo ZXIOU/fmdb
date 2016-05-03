@@ -9,7 +9,7 @@ FOUNDATION_EXPORT const unsigned char FMDBVersionString[];
 #import "FMDatabaseQueue.h"
 #import "FMDatabasePool.h"
 
-@interface AXUDataBaseHandle : NSObject
+@interface FMDB : NSObject
 
 @property(nonatomic, strong)FMDatabaseQueue *queue;
 
